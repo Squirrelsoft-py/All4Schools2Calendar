@@ -194,15 +194,16 @@ docker login ghcr.io -u Squirrelsoft-py -p <token with read:packages>
 
 The compose file is self contained, it needs no `.env` file and no build on the server.
 
-**Put the values in quotes.** YAML reads a `#` after a space as the start of a comment, so
-an unquoted password like `A4S_PASSWORD: #secret` becomes empty and the login fails:
+**Put the values in quotes.** YAML can cut a value off at special characters, so an
+unquoted password with a space in it becomes invalid:
 
 ```yaml
-      A4S_PASSWORD: "#secret"     # correct
-      A4S_PASSWORD: #secret       # wrong, the value is empty
+      A4S_PASSWORD: "my password"   # correct
+      A4S_PASSWORD: my password     # wrong, the value ends at the space
 ```
 
-The program reports this with `The environment variable A4S_PASSWORD is set but empty`.
+The program reports such a mistake with `The environment variable A4S_PASSWORD is set but
+empty`.
 
 ### On the command line
 

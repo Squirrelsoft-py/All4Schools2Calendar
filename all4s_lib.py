@@ -71,8 +71,8 @@ def resolve_credentials(config=None, path=None, url=None, username=None, passwor
         if value is not None and value.strip() == "":
             raise ConfigError(
                 f"The environment variable {name} is set but empty. In a compose "
-                f"file the value has to be in quotes, a password can start with a "
-                f"# that yaml would read as a comment."
+                f"file the value has to be in quotes, yaml can cut it off at "
+                f"special characters."
             )
         return value
 

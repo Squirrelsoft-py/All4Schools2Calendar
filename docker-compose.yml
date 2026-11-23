@@ -13,8 +13,7 @@ services:
     environment:
       TZ: Europe/Berlin
       # School portal (All4Schools)
-      # Always put the values in quotes, a password can start with a # or
-      # contain other characters that yaml would otherwise interpret.
+      # Put the values in quotes, yaml can cut them off at special characters.
       A4S_URL: "schule.louisenlund.de"
       A4S_USERNAME: "your-user-name"
       A4S_PASSWORD: "your-password"
