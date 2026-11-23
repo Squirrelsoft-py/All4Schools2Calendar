@@ -3,7 +3,8 @@
         "url": "schule.louisenlund.de",
         "username": "example-user",
         "password": "example-password",
-        "pin": null
+        "pin": null,
+        "refresh": 1440
     },
     "caldav": {
         "url": "https://caldav.example.com/calendars/EXAMPLE0000/00000000-0000-0000-0000-000000000000",

@@ -76,7 +76,8 @@ All settings of the project are in one JSON file:
         "url": "schule.louisenlund.de",
         "username": "example-user",
         "password": "example-password",
-        "pin": null
+        "pin": null,
+        "refresh": 1440
     },
     "caldav": {
         "url": "https://caldav.example.com/calendars/EXAMPLE0000/00000000-0000-0000-0000-000000000000",
@@ -96,6 +97,7 @@ All settings of the project are in one JSON file:
   `https://schule.louisenlund.de/` are accepted as well – the scheme and the trailing slash
   are stripped automatically.
 - `pin` is optional and only needed for accounts with two factor authentication.
+- `refresh` is the interval of the scheduler **in minutes**, `1440` is every 24 hours.
 
 **`caldav` section** – the calendar:
 
@@ -156,8 +158,8 @@ case, the key in the configuration file is the name without the prefix:
 | CalDAV password | `CALDAV_PASSWORD` | `caldav.password` | – | |
 | Calendar name | `CALDAV_CALENDAR_NAME` | `caldav.calendar_name` | `Stundenplan` | The calendar that is written |
 | Filters | `A4S_FILTERS` | `filters` | `StudioTimes` | Subjects that are removed, comma separated in the environment |
-| Sync period | `A4S_SYNC_DAYS` | – | `31` | Number of days that are synced |
-| Scheduler interval | `SYNC_INTERVAL_HOURS` | – | `24` | Hours between two syncs of the scheduler |
+| Sync period | `A4S_SYNC_DAYS` | `a4s.sync_days` | `31` | Number of days that are synced |
+| Refresh | `A4S_REFRESH` | `a4s.refresh` | `1440` | Minutes between two syncs of the scheduler |
 
 ## Usage
 
@@ -165,7 +167,7 @@ case, the key in the configuration file is the name without the prefix:
 | --- | --- |
 | `a4s_console.py` | Prints the lessons of the current day |
 | `a4s_main_caldav.py` | Syncs the next 31 days into the CalDAV calendar |
-| `scheduler.py` | Runs the sync in a loop, every `SYNC_INTERVAL_HOURS` hours |
+| `scheduler.py` | Runs the sync in a loop, every `a4s.refresh` minutes |
 
 ```bash
 .venv/bin/python a4s_console.py
@@ -212,7 +214,7 @@ cp .env.example .env
 # fill in your own data in .env
 docker compose build
 docker compose run --rm sync        # sync once
-docker compose up -d scheduler      # sync every SYNC_INTERVAL_HOURS hours
+docker compose up -d scheduler      # sync every a4s.refresh minutes
 ```
 
 Without Docker Compose:

@@ -1,16 +1,16 @@
 """Runs the calendar sync in a loop, for example inside a container.
 
-The interval is taken from the environment variable SYNC_INTERVAL_HOURS
-(default 24 hours).
+The interval is taken from the setting "refresh" (in minutes) of the
+configuration file or from the environment variable A4S_REFRESH.
 """
 
 import datetime
-import os
 import time
 
+import all4s_lib
 import a4s_main_caldav
 
-INTERVAL_HOURS = float(os.environ.get("SYNC_INTERVAL_HOURS", 24))
+INTERVAL_MINUTES = float(all4s_lib.get_setting("A4S_REFRESH", 1440, cast=float))
 
 
 def main():
@@ -21,9 +21,9 @@ def main():
             # A failed sync must not stop the scheduler, the next run tries again
             print(f"Sync failed: {error}")
 
-        next_sync = datetime.datetime.now() + datetime.timedelta(hours=INTERVAL_HOURS)
+        next_sync = datetime.datetime.now() + datetime.timedelta(minutes=INTERVAL_MINUTES)
         print(f"Next sync at {next_sync.isoformat()}")
-        time.sleep(INTERVAL_HOURS * 3600)
+        time.sleep(INTERVAL_MINUTES * 60)
 
 
 if __name__ == "__main__":

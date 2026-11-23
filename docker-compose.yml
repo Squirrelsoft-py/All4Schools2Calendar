@@ -14,7 +14,7 @@ services:
     # volumes:
     #   - ./config:/config:ro
 
-  # Runs the sync in a loop, every SYNC_INTERVAL_HOURS hours
+  # Runs the sync in a loop, every a4s.refresh minutes
   scheduler:
     build: .
     image: all4schools2calendar:latest
