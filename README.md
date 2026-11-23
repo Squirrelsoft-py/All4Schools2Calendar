@@ -14,7 +14,8 @@ lessons are added.
 - Keeps the calendar in sync: new lessons are created, cancelled lessons are deleted
 - Filters out the "Studio Times" lessons (can be enabled again)
 - Merges consecutive lessons of the same subject into a single event
-- All credentials live in local files that are never committed
+- All credentials live in local files or environment variables that are never committed
+- Ready to run in a Docker container, the image is built by GitHub Actions
 
 ## Requirements
 
@@ -74,7 +75,11 @@ prints a warning including the `cp` command that creates the real file.
         "url": "schule.louisenlund.de",
         "username": "example-user",
         "password": "example-password",
-        "pin": null
+        "pin": null,
+        "include_studio_times": false
+    },
+    "caldav": {
+        "calendar_name": "Stundenplan"
     }
 }
 ```
@@ -83,6 +88,8 @@ prints a warning including the `cp` command that creates the real file.
   `https://schule.louisenlund.de/` are accepted as well – the scheme and the trailing slash
   are stripped automatically.
 - `pin` is optional and only needed for accounts with two factor authentication.
+- `include_studio_times` keeps the "Studio Times" lessons in the calendar when it is `true`.
+- `calendar_name` is the name of the CalDAV calendar that is written.
 
 The credentials are resolved in this order:
 
@@ -107,19 +114,44 @@ The file path can be changed with the `CALDAV_CREDENTIALS` environment variable.
 the real file nor the template is present, the server information is asked for
 interactively and can be saved to `caldav_credentials.txt`.
 
+### Settings
+
+Every setting can be given as an environment variable or in the configuration file. The
+environment variable has the highest priority, the file name is the setting name in upper
+case, the key in the configuration file is the name without the prefix:
+
+| Setting | Environment variable | Config file | Default | Description |
+| --- | --- | --- | --- | --- |
+| School URL | `A4S_URL` | `a4s.url` | – | Host name of the school portal |
+| School user | `A4S_USERNAME` | `a4s.username` | – | |
+| School password | `A4S_PASSWORD` | `a4s.password` | – | |
+| School PIN | `A4S_PIN` | `a4s.pin` | – | Only for two factor authentication |
+| CalDAV URL | `CALDAV_URL` | – | – | URL of the calendar collection |
+| CalDAV user | `CALDAV_USERNAME` | – | – | |
+| CalDAV password | `CALDAV_PASSWORD` | – | – | |
+| Calendar name | `CALDAV_CALENDAR_NAME` | `caldav.calendar_name` | `Stundenplan` | The calendar that is written |
+| Studio Times filter | `A4S_INCLUDE_STUDIO_TIMES` | `a4s.include_studio_times` | `false` | `true` keeps the "Studio Times" lessons |
+| Sync period | `A4S_SYNC_DAYS` | – | `31` | Number of days that are synced |
+| Scheduler interval | `SYNC_INTERVAL_HOURS` | – | `24` | Hours between two syncs of the scheduler |
+
+The CalDAV URL, user and password can also be given in `caldav_credentials.txt`, the
+environment variables win over that file.
+
 ## Usage
 
 | Script | Description |
 | --- | --- |
 | `a4s_console.py` | Prints the lessons of the current day |
-| `a4s_main_caldav.py` | Syncs the next 31 days into the CalDAV calendar "Stundenplan" |
+| `a4s_main_caldav.py` | Syncs the next 31 days into the CalDAV calendar |
+| `scheduler.py` | Runs the sync in a loop, every `SYNC_INTERVAL_HOURS` hours |
 
 ```bash
 .venv/bin/python a4s_console.py
 .venv/bin/python a4s_main_caldav.py
 ```
 
-The calendar name is set in the scripts, see `calendar_name="Stundenplan"`.
+The calendar name and the other settings are taken from the environment or the
+configuration file, see [Settings](#settings).
 
 Run the sync regularly, for example every evening with a cron job:
 
@@ -131,7 +163,7 @@ Run the sync regularly, for example every evening with a cron job:
 
 1. The lessons of the next 31 days are read from the school portal.
 2. The lessons of the same subject that follow each other directly are merged into one
-   event, "Studio Times" lessons are removed.
+   event, "Studio Times" lessons are removed unless `A4S_INCLUDE_STUDIO_TIMES` is `true`.
 3. Every event of the calendar in that period is compared with the timetable:
    - events that are no longer part of the timetable are deleted
    - duplicates of the same lesson are deleted
@@ -148,6 +180,38 @@ credentials are sent to its REST API:
    `{"Username": ..., "Password": ..., "Pin": ...}` returns a JSON Web Token.
 2. Every following request is sent with the header `Authorization: Bearer <token>`.
 
+## Docker
+
+The repository contains a `Dockerfile` and a `docker-compose.yml`. All settings are
+passed as environment variables, the credentials are never copied into the image.
+
+```bash
+cp .env.example .env
+# fill in your own data in .env
+docker compose build
+docker compose run --rm sync        # sync once
+docker compose up -d scheduler      # sync every SYNC_INTERVAL_HOURS hours
+```
+
+Without Docker Compose:
+
+```bash
+docker build -t all4schools2calendar .
+docker run --rm --env-file .env all4schools2calendar                     # sync once
+docker run --rm --env-file .env all4schools2calendar a4s_console.py      # print the timetable
+docker run -d --name a4s --env-file .env all4schools2calendar scheduler.py
+```
+
+The image is built by GitHub Actions on every push to `main` and pushed to the GitHub
+container registry:
+
+```bash
+docker pull ghcr.io/squirrelsoft-py/all4schools2calendar:latest
+```
+
+The workflow is in `.github/workflows/docker.yml`. To use the image from the registry,
+change the `image:` line in `docker-compose.yml` and remove the `build:` line.
+
 ## Project layout
 
 | File | Description |
@@ -157,6 +221,10 @@ credentials are sent to its REST API:
 | `a4s_files.py` | Locates the credential files and their example templates |
 | `a4s_console.py` | Prints the timetable of today |
 | `a4s_main_caldav.py` | Syncs the timetable into a CalDAV calendar |
+| `scheduler.py` | Runs the sync in a loop |
+| `Dockerfile` | Image for the sync |
+| `docker-compose.yml` | One shot sync and scheduler |
+| `.env.example` | Template for the settings of the container |
 
 ## Errors
 
@@ -168,9 +236,10 @@ credentials are sent to its REST API:
 
 ## Security
 
-- `a4s_config.json` and `caldav_credentials.txt` are listed in `.gitignore`, so real
-  credentials are never committed.
+- `a4s_config.json`, `caldav_credentials.txt` and `.env` are listed in `.gitignore`, so
+  real credentials are never committed.
 - Only the `*.example.*` templates are tracked in the repository.
+- The `.dockerignore` keeps the credentials out of the build context.
 - If you ever committed real credentials, remove them from the history (for example with
   `git filter-repo --replace-text`) and change the affected passwords.
 

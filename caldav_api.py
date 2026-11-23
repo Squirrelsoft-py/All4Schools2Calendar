@@ -16,7 +16,19 @@ class CalDAVError(Exception):
 class Main:
     def authenticate_caldav(self):
         creds = None
-        # Check if credentials file exists, fall back to the example template
+
+        # 1. the environment has the highest priority
+        url = os.environ.get("CALDAV_URL")
+        username = os.environ.get("CALDAV_USERNAME")
+        password = os.environ.get("CALDAV_PASSWORD")
+        if url and username and password:
+            return {
+                'url': url,
+                'username': username,
+                'password': password
+            }
+
+        # 2. the credentials file
         path, is_example = a4s_files.resolve(CREDENTIALS_FILENAME)
         if is_example:
             a4s_files.warn_example(a4s_files.real_path(CREDENTIALS_FILENAME), path)

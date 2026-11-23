@@ -8,5 +8,6 @@ venv/
 
 # Local secrets - do NOT commit real credentials
 # The matching *.example.* templates are tracked on purpose.
+.env
 a4s_config.json
 caldav_credentials.txt

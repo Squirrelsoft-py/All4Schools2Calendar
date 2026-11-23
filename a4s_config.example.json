@@ -3,6 +3,10 @@
         "url": "schule.louisenlund.de",
         "username": "example-user",
         "password": "example-password",
-        "pin": null
+        "pin": null,
+        "include_studio_times": false
+    },
+    "caldav": {
+        "calendar_name": "Stundenplan"
     }
 }

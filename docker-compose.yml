@@ -1,0 +1,25 @@
+services:
+  # Runs the sync once and exits, useful for a cron job on the host:
+  #   docker compose run --rm sync
+  sync:
+    build: .
+    image: all4schools2calendar:latest
+    container_name: all4schools2calendar-sync
+    env_file:
+      - .env
+    environment:
+      TZ: Europe/Berlin
+    command: ["a4s_main_caldav.py"]
+    restart: "no"
+
+  # Runs the sync in a loop, every SYNC_INTERVAL_HOURS hours
+  scheduler:
+    build: .
+    image: all4schools2calendar:latest
+    container_name: all4schools2calendar
+    env_file:
+      - .env
+    environment:
+      TZ: Europe/Berlin
+    command: ["scheduler.py"]
+    restart: unless-stopped

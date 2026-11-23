@@ -1,0 +1,15 @@
+# Everything that is not needed for the image
+.git
+.github
+.venv
+venv
+__pycache__
+*.py[cod]
+*.egg-info
+
+# Never put the secrets into the image
+.env
+a4s_config.json
+caldav_credentials.txt
+credentials.json
+token.json
