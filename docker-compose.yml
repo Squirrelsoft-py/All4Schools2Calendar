@@ -13,18 +13,20 @@ services:
     environment:
       TZ: Europe/Berlin
       # School portal (All4Schools)
-      A4S_URL: schule.louisenlund.de
-      A4S_USERNAME: your-user-name
-      A4S_PASSWORD: your-password
+      # Always put the values in quotes, a password can start with a # or
+      # contain other characters that yaml would otherwise interpret.
+      A4S_URL: "schule.louisenlund.de"
+      A4S_USERNAME: "your-user-name"
+      A4S_PASSWORD: "your-password"
       A4S_PIN: ""
       # CalDAV calendar
-      CALDAV_URL: https://caldav.example.com/calendars/EXAMPLE0000/00000000-0000-0000-0000-000000000000
-      CALDAV_USERNAME: your-caldav-user
-      CALDAV_PASSWORD: your-caldav-password
-      CALDAV_CALENDAR_NAME: Stundenplan
+      CALDAV_URL: "https://caldav.example.com/calendars/EXAMPLE0000/00000000-0000-0000-0000-000000000000"
+      CALDAV_USERNAME: "your-caldav-user"
+      CALDAV_PASSWORD: "your-caldav-password"
+      CALDAV_CALENDAR_NAME: "Stundenplan"
       # Timetable: subjects that are removed from the calendar, days that are
       # synced and the minutes between two syncs
-      A4S_FILTERS: StudioTimes
+      A4S_FILTERS: "StudioTimes"
       A4S_SYNC_DAYS: "31"
       A4S_REFRESH: "1440"
 
