@@ -209,10 +209,21 @@ credentials are sent to its REST API:
 The repository contains a `Dockerfile` and a `docker-compose.yml`. All settings are
 passed as environment variables, the credentials are never copied into the image.
 
+### Portainer or Dockge
+
+1. Copy the content of `docker-compose.yml` into the stack editor
+2. Replace the values that are marked with `your-...`
+3. Start the stack
+
+The compose file is self contained, it needs no `.env` file and no build on the server.
+
+The image is in a private package by default. To pull it without a token, make the package
+public (package settings → *Change visibility* → Public), or add the registry `ghcr.io`
+with a token that has the `read:packages` scope to Portainer or Dockge.
+
+### On the command line
+
 ```bash
-cp .env.example .env
-# fill in your own data in .env
-docker compose build
 docker compose up -d scheduler                       # sync every a4s.refresh minutes
 docker compose --profile tools run --rm sync          # sync once and exit
 ```
@@ -232,6 +243,8 @@ docker run --rm --env-file .env all4schools2calendar                     # sync 
 docker run --rm --env-file .env all4schools2calendar a4s_console.py      # print the timetable
 docker run -d --name a4s --env-file .env all4schools2calendar scheduler.py
 ```
+
+The `.env.example` holds the same settings for the `docker run` commands.
 
 The image is built by GitHub Actions on every push to `main` and pushed to the GitHub
 container registry:
@@ -258,9 +271,6 @@ The workflow is in `.github/workflows/docker.yml`:
 
 The image is built for `linux/amd64` and `linux/arm64` (Raspberry Pi), the build cache is
 kept between the runs. After the push the image is started once as a smoke test.
-
-To use the image from the registry, change the `image:` line in `docker-compose.yml` and
-remove the `build:` line.
 
 ## Project layout
 
