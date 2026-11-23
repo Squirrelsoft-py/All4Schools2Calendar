@@ -10,5 +10,3 @@ venv/
 # The matching *.example.* templates are tracked on purpose.
 a4s_config.json
 caldav_credentials.txt
-credentials.json
-token.json

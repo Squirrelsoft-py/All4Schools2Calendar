@@ -11,8 +11,6 @@ import os
 ENV_VARS = {
     "a4s_config.json": "A4S_CONFIG",
     "caldav_credentials.txt": "CALDAV_CREDENTIALS",
-    "credentials.json": "GOOGLE_CREDENTIALS_FILE",
-    "token.json": "GOOGLE_TOKEN_FILE",
 }
 
 

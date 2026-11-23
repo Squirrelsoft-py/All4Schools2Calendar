@@ -247,7 +247,7 @@ class Main:
             print("No events found in the specified date range.")
             return None
         else:
-            # Format the events to match the Google Calendar API structure
+            # Format the events to a simple dictionary structure
             formatted_events = []
             for event in events:
                 component = self.get_event_component(event)

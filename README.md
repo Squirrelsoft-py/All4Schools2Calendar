@@ -1,7 +1,7 @@
 # All4Schools2Calendar
 
-Syncs the timetable of the All4Schools school portal (Schule Luisenlund) into a CalDAV or
-Google Calendar.
+Syncs the timetable of the All4Schools school portal (Schule Luisenlund) into a CalDAV
+calendar.
 
 The script reads the timetable from the school's REST API, turns every lesson into a
 calendar event and keeps the calendar in sync: lessons that disappeared are deleted, new
@@ -11,7 +11,6 @@ lessons are added.
 
 - Reads the timetable from the All4Schools API (JWT login, no browser needed)
 - Writes the lessons into any CalDAV calendar (Nextcloud, a CalDAV provider, Radicale, …)
-- Writes the lessons into a Google Calendar
 - Keeps the calendar in sync: new lessons are created, cancelled lessons are deleted
 - Filters out the "Studio Times" lessons (can be enabled again)
 - Merges consecutive lessons of the same subject into a single event
@@ -21,7 +20,7 @@ lessons are added.
 
 - Python 3.9 or newer
 - Access to the school portal (user name and password)
-- A CalDAV account or a Google Calendar
+- A CalDAV account
 
 ## Setup
 
@@ -47,7 +46,7 @@ source .venv/bin/activate
 
 ## Configuration
 
-The scripts expect four local credential files. Every one of them has a tracked example
+The scripts expect two local credential files. Every one of them has a tracked example
 template (`*.example.*`) with placeholder data, so the repository is complete right after
 cloning:
 
@@ -55,8 +54,6 @@ cloning:
 | --- | --- | --- | --- |
 | `a4s_config.json` | `a4s_config.example.json` | `all4s_lib.py` | JSON with the school credentials |
 | `caldav_credentials.txt` | `caldav_credentials.example.txt` | `caldav_api.py` | 3 lines: `url`, `username`, `password` |
-| `credentials.json` | `credentials.example.json` | `google_calender_api.py` | Google OAuth client secrets ("installed" app) |
-| `token.json` | `token.example.json` | `google_calender_api.py` | Google OAuth token, written automatically on the first login |
 
 The real files are listed in `.gitignore`, only the example templates are tracked. Copy the
 templates and fill in your own data:
@@ -64,7 +61,6 @@ templates and fill in your own data:
 ```bash
 cp a4s_config.example.json         a4s_config.json
 cp caldav_credentials.example.txt   caldav_credentials.txt
-cp credentials.example.json         credentials.json
 ```
 
 If a real file is missing, the matching example template is used instead and the program
@@ -110,47 +106,17 @@ The file path can be changed with the `CALDAV_CREDENTIALS` environment variable.
 the real file nor the template is present, the server information is asked for
 interactively and can be saved to `caldav_credentials.txt`.
 
-### `credentials.json` and `token.json` – the Google login
-
-Download the OAuth client from the
-[Google Cloud console](https://console.cloud.google.com/apis/credentials) (type "Desktop
-app") and save it as `credentials.json`:
-
-```json
-{
-    "installed": {
-        "client_id": "000000000000-exampleclientid.apps.googleusercontent.com",
-        "project_id": "all4schools2calendar-example",
-        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-        "token_uri": "https://oauth2.googleapis.com/token",
-        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-        "client_secret": "GOCSPX-example-client-secret",
-        "redirect_uris": ["http://localhost"]
-    }
-}
-```
-
-`token.json` is written automatically after the first OAuth login, there is no need to
-create it by hand. The template only contains placeholder data and is ignored by the
-program: a placeholder token is detected and the browser login flow is started instead.
-
-The file paths can be changed with the `GOOGLE_CREDENTIALS_FILE` and `GOOGLE_TOKEN_FILE`
-environment variables.
-
 ## Usage
 
 | Script | Description |
 | --- | --- |
 | `a4s_console.py` | Prints the lessons of the current day |
 | `a4s_main_caldav.py` | Syncs the next 31 days into the CalDAV calendar "Stundenplan" |
-| `a4s_google_calender.py` | Syncs the next 31 days into the Google Calendar "Stundenplan" |
-| `a4s_google_calendar_temp.py` | Like above, but deletes all events of the period first |
 | `a4s_console_one.py` | Console script with its own copy of the library |
 
 ```bash
 .venv/bin/python a4s_console.py
 .venv/bin/python a4s_main_caldav.py
-.venv/bin/python a4s_google_calender.py
 ```
 
 The calendar name is set in the scripts, see `calendar_name="Stundenplan"`.
@@ -188,13 +154,10 @@ credentials are sent to its REST API:
 | --- | --- |
 | `all4s_lib.py` | Access to the school portal: login, user, school and timetable |
 | `caldav_api.py` | CalDAV client: read, create and delete events |
-| `google_calender_api.py` | Google Calendar client: read, create and delete events |
 | `a4s_files.py` | Locates the credential files and their example templates |
 | `a4s_console.py` | Prints the timetable of today |
 | `a4s_main_caldav.py` | Syncs the timetable into a CalDAV calendar |
-| `a4s_google_calender.py` | Syncs the timetable into a Google Calendar |
-| `a4s_google_calendar_temp.py` | Syncs into a Google Calendar, deleting the old events first |
-| `a4s_console_one.py` | Standalone version of the library and the console script |
+| `a4s_console_one.py` | Console script with its own copy of the library |
 | `test.py` | Small helper to test the calendar connection |
 
 ## Errors
@@ -204,12 +167,11 @@ credentials are sent to its REST API:
 | `ConfigError` | The configuration file is missing, unreadable or incomplete |
 | `LoginError` | The school portal is unreachable or the login was rejected |
 | `CalDAVError` | The CalDAV server cannot be reached or does not work as expected |
-| `GoogleAuthError` | The Google client secrets are missing or still contain the placeholder data |
 
 ## Security
 
-- `a4s_config.json`, `caldav_credentials.txt`, `credentials.json` and `token.json` are
-  listed in `.gitignore`, so real credentials are never committed.
+- `a4s_config.json` and `caldav_credentials.txt` are listed in `.gitignore`, so real
+  credentials are never committed.
 - Only the `*.example.*` templates are tracked in the repository.
 - If you ever committed real credentials, remove them from the history (for example with
   `git filter-repo --replace-text`) and change the affected passwords.
