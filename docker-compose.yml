@@ -3,43 +3,29 @@
 # Copy this file into Portainer (Stacks) or Dockge, replace the values that
 # are marked with "your-..." and start the stack.
 #
-# The scheduler keeps the calendar up to date, it syncs every A4S_REFRESH
-# minutes. A single sync can be started with:
-#   docker compose --profile tools run --rm sync
-
-x-environment: &environment
-  TZ: Europe/Berlin
-  # School portal (All4Schools)
-  A4S_URL: schule.louisenlund.de
-  A4S_USERNAME: your-user-name
-  A4S_PASSWORD: your-password
-  A4S_PIN: ""
-  # CalDAV calendar
-  CALDAV_URL: https://caldav.example.com/calendars/EXAMPLE0000/00000000-0000-0000-0000-000000000000
-  CALDAV_USERNAME: your-caldav-user
-  CALDAV_PASSWORD: your-caldav-password
-  CALDAV_CALENDAR_NAME: Stundenplan
-  # Timetable: subjects that are removed from the calendar, days that are
-  # synced and the minutes between two syncs
-  A4S_FILTERS: StudioTimes
-  A4S_SYNC_DAYS: "31"
-  A4S_REFRESH: "1440"
+# The scheduler syncs the calendar every A4S_REFRESH minutes.
 
 services:
-  # Keeps the calendar up to date
   scheduler:
     image: ghcr.io/squirrelsoft-py/all4schools2calendar:latest
     restart: unless-stopped
-    environment: *environment
     command: ["scheduler.py"]
-
-  # Syncs once and exits
-  sync:
-    image: ghcr.io/squirrelsoft-py/all4schools2calendar:latest
-    restart: "no"
-    environment: *environment
-    command: ["a4s_main_caldav.py"]
-    profiles:
-      - tools
+    environment:
+      TZ: Europe/Berlin
+      # School portal (All4Schools)
+      A4S_URL: schule.louisenlund.de
+      A4S_USERNAME: your-user-name
+      A4S_PASSWORD: your-password
+      A4S_PIN: ""
+      # CalDAV calendar
+      CALDAV_URL: https://caldav.example.com/calendars/EXAMPLE0000/00000000-0000-0000-0000-000000000000
+      CALDAV_USERNAME: your-caldav-user
+      CALDAV_PASSWORD: your-caldav-password
+      CALDAV_CALENDAR_NAME: Stundenplan
+      # Timetable: subjects that are removed from the calendar, days that are
+      # synced and the minutes between two syncs
+      A4S_FILTERS: StudioTimes
+      A4S_SYNC_DAYS: "31"
+      A4S_REFRESH: "1440"
 
 networks: {}

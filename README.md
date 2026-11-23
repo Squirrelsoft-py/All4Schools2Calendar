@@ -197,16 +197,11 @@ The compose file is self contained, it needs no `.env` file and no build on the 
 ### On the command line
 
 ```bash
-docker compose up -d scheduler                       # sync every a4s.refresh minutes
-docker compose --profile tools run --rm sync          # sync once and exit
+docker compose up -d                    # sync every a4s.refresh minutes
 ```
 
-The compose file has two services:
-
-| Service | Description |
-| --- | --- |
-| `scheduler` | The default service, it keeps the calendar up to date and is restarted if it stops |
-| `sync` | Runs the sync once and exits, it has the profile `tools` and is only started when it is named explicitly |
+The compose file has a single service, the `scheduler`. It keeps the calendar up to date,
+is restarted if it stops and needs no further configuration.
 
 Without Docker Compose:
 
@@ -245,7 +240,7 @@ kept between the runs. After the push the image is started once as a smoke test.
 | `a4s_main_caldav.py` | Syncs the timetable into a CalDAV calendar |
 | `scheduler.py` | Runs the sync in a loop |
 | `Dockerfile` | Image for the sync |
-| `docker-compose.yml` | Scheduler and one shot sync, ready for Portainer and Dockge |
+| `docker-compose.yml` | The scheduler, ready for Portainer and Dockge |
 | `.env.example` | Template for the settings of the container |
 
 ## Development
