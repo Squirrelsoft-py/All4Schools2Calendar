@@ -1,21 +1,27 @@
 # All4Schools2Calendar
 
-Syncs the timetable of the All4Schools school portal (Schule Luisenlund) into a CalDAV
-calendar.
+[![Docker](https://github.com/Squirrelsoft-py/All4Schools2Calendar/actions/workflows/docker.yml/badge.svg)](https://github.com/Squirrelsoft-py/All4Schools2Calendar/actions/workflows/docker.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+Syncs the timetable of the All4Schools school portal into a CalDAV calendar.
 
 The script reads the timetable from the school's REST API, turns every lesson into a
 calendar event and keeps the calendar in sync: lessons that disappeared are deleted, new
 lessons are added.
 
+It is written for the All4Schools portal (version 3.3) that is used at Schule Luisenlund,
+but everything except the portal itself is generic.
+
 ## Features
 
-- Reads the timetable from the All4Schools API (JWT login, no browser needed)
-- Writes the lessons into any CalDAV calendar (Nextcloud, Radicale, …)
+- Reads the timetable from the school portal (JWT login, no browser needed)
+- Writes the lessons into any CalDAV calendar (Nextcloud, Radicale, Infomaniak, …)
 - Keeps the calendar in sync: new lessons are created, cancelled lessons are deleted
-- Filters out the "Studio Times" lessons (the filter list can be changed)
+- Filters out lessons you do not want in the calendar, for example the "Studio Times"
 - Merges consecutive lessons of the same subject into a single event
-- All credentials live in local files or environment variables that are never committed
-- Ready to run in a Docker container, the image is built by GitHub Actions
+- All settings live in one JSON file or in environment variables, the credentials are
+  never committed
+- Runs in a Docker container, the image is built by GitHub Actions
 
 ## Requirements
 
@@ -47,28 +53,12 @@ source .venv/bin/activate
 
 ## Configuration
 
-The scripts read their settings from `a4s_config.json`. Every one of the credential files
-has a tracked example template (`*.example.*`) with placeholder data, so the repository is
-complete right after cloning:
-
-| Credential file | Example template | Used by | Format |
-| --- | --- | --- | --- |
-| `a4s_config.json` | `a4s_config.example.json` | all scripts | JSON with all settings |
-| `caldav_credentials.txt` | `caldav_credentials.example.txt` | `caldav_api.py` | Optional alternative for the CalDAV login, 3 lines: `url`, `username`, `password` |
-
-The real files are listed in `.gitignore`, only the example templates are tracked. Copy the
-template and fill in your own data:
+All settings live in one JSON file, `a4s_config.json`. The repository contains a template
+with placeholder data, copy it and fill in your own data:
 
 ```bash
 cp a4s_config.example.json a4s_config.json
 ```
-
-If the real file is missing, the matching example template is used instead and the program
-prints a warning including the `cp` command that creates the real file.
-
-### `a4s_config.json` – the settings
-
-All settings of the project are in one JSON file:
 
 ```json
 {
@@ -102,6 +92,8 @@ All settings of the project are in one JSON file:
 **`caldav` section** – the calendar:
 
 - `url` is the URL of the calendar collection, `username` and `password` the credentials.
+  The URL differs per provider, for example `https://cloud.example.com/remote.php/dav/`
+  for Nextcloud or `https://caldav.example.com/calendars/<user>/<id>` for other providers.
 - `calendar_name` is the name of the CalDAV calendar that is written.
 
 **`filters`** – the subjects that are removed from the calendar. The list is prefilled with
@@ -114,32 +106,6 @@ that kind are deleted by the sync. The list can be changed as needed:
 
 An empty list keeps every lesson. The comparison ignores case and spaces, so the filter
 `StudioTimes` also matches `Studio Times digitalfrei` and `StudioTimes Spezial`.
-
-The credentials are resolved in this order:
-
-1. explicit arguments: `all4s_lib.Main(url=..., username=..., password=..., pin=...)`
-2. environment variables: `A4S_URL`, `A4S_USERNAME`, `A4S_PASSWORD`, `A4S_PIN`
-3. the `a4s` section of `a4s_config.json` (the path can be changed with `A4S_CONFIG`)
-
-### `caldav_credentials.txt` – the CalDAV login (optional)
-
-An alternative to the `caldav` section of the configuration file, three lines with the URL,
-the user name and the password:
-
-```
-https://caldav.example.com/calendars/EXAMPLE0000/00000000-0000-0000-0000-000000000000
-example-user
-example-password
-```
-
-Line 1 is the URL of the calendar collection, line 2 the user name and line 3 the password
-(or app password). The URL differs per provider, for example
-`https://cloud.example.com/remote.php/dav/` for Nextcloud or
-`https://caldav.example.com/calendars/<user>/<id>` for other providers.
-
-The `caldav` section of `a4s_config.json` and the environment variables have priority over
-this file. If neither is set, the server information is asked for interactively and can be
-saved to `caldav_credentials.txt`.
 
 ### Settings
 
@@ -161,6 +127,10 @@ case, the key in the configuration file is the name without the prefix:
 | Sync period | `A4S_SYNC_DAYS` | `a4s.sync_days` | `31` | Number of days that are synced |
 | Refresh | `A4S_REFRESH` | `a4s.refresh` | `1440` | Minutes between two syncs of the scheduler |
 
+Instead of the `caldav` section, the CalDAV login can also be written into
+`caldav_credentials.txt` (three lines: `url`, `username`, `password`). The configuration
+file and the environment variables have priority over that file.
+
 ## Usage
 
 | Script | Description |
@@ -173,9 +143,6 @@ case, the key in the configuration file is the name without the prefix:
 .venv/bin/python a4s_console.py
 .venv/bin/python a4s_main_caldav.py
 ```
-
-The calendar name and the other settings are taken from the environment or the
-configuration file, see [Settings](#settings).
 
 Run the sync regularly, for example every evening with a cron job:
 
@@ -197,8 +164,8 @@ Running the sync twice in a row does not change anything.
 
 ### How the login works
 
-The school portal is a single page application and has no form login anymore. The
-credentials are sent to its REST API:
+The school portal is a single page application and has no form login. The credentials are
+sent to its REST API:
 
 1. `POST https://<host>/api/Api/Authorization/JwtAuth` with
    `{"Username": ..., "Password": ..., "Pin": ...}` returns a JSON Web Token.
@@ -206,8 +173,18 @@ credentials are sent to its REST API:
 
 ## Docker
 
-The repository contains a `Dockerfile` and a `docker-compose.yml`. All settings are
-passed as environment variables, the credentials are never copied into the image.
+The image is built by GitHub Actions and pushed to the GitHub container registry:
+
+```bash
+docker pull ghcr.io/squirrelsoft-py/all4schools2calendar:latest
+```
+
+The package is private by default. To pull it without a token, make the package public
+(package settings → *Change visibility* → Public), or log in first:
+
+```bash
+docker login ghcr.io -u Squirrelsoft-py -p <token with read:packages>
+```
 
 ### Portainer or Dockge
 
@@ -216,10 +193,6 @@ passed as environment variables, the credentials are never copied into the image
 3. Start the stack
 
 The compose file is self contained, it needs no `.env` file and no build on the server.
-
-The image is in a private package by default. To pull it without a token, make the package
-public (package settings → *Change visibility* → Public), or add the registry `ghcr.io`
-with a token that has the `read:packages` scope to Portainer or Dockge.
 
 ### On the command line
 
@@ -246,25 +219,14 @@ docker run -d --name a4s --env-file .env all4schools2calendar scheduler.py
 
 The `.env.example` holds the same settings for the `docker run` commands.
 
-The image is built by GitHub Actions on every push to `main` and pushed to the GitHub
-container registry:
-
-```bash
-docker pull ghcr.io/squirrelsoft-py/all4schools2calendar:latest
-```
-
-The package is private by default. To pull it without a token, make it public in the
-package settings, or log in first:
-
-```bash
-docker login ghcr.io -u Squirrelsoft-py -p <token with read:packages>
-```
+### Build pipeline
 
 The workflow is in `.github/workflows/docker.yml`:
 
 | Trigger | What happens |
 | --- | --- |
 | Push to `main` | The image is built and pushed, tagged with `main`, `latest` and the commit sha |
+| Push to `dev` | The image is built and pushed, tagged with `dev` and the commit sha |
 | Push of a `v*` tag | The image is built and pushed, tagged with the version (`1.2`, `1.2.3`) |
 | Pull request | The image is built to check that it still works, nothing is pushed |
 | Manual run | The same as a push to `main` |
@@ -283,8 +245,21 @@ kept between the runs. After the push the image is started once as a smoke test.
 | `a4s_main_caldav.py` | Syncs the timetable into a CalDAV calendar |
 | `scheduler.py` | Runs the sync in a loop |
 | `Dockerfile` | Image for the sync |
-| `docker-compose.yml` | One shot sync and scheduler |
+| `docker-compose.yml` | Scheduler and one shot sync, ready for Portainer and Dockge |
 | `.env.example` | Template for the settings of the container |
+
+## Development
+
+Development happens on the `dev` branch, changes are merged into `main` when they work.
+Every push to `main` or `dev` builds the container image, pull requests are only built to
+check that they still work.
+
+```bash
+git checkout dev
+# ... change something ...
+git commit -am "..."
+git push origin dev
+```
 
 ## Errors
 
@@ -302,7 +277,9 @@ kept between the runs. After the push the image is started once as a smoke test.
 - The `.dockerignore` keeps the credentials out of the build context.
 - If you ever committed real credentials, remove them from the history (for example with
   `git filter-repo --replace-text`) and change the affected passwords.
+
 ## License
 
-The school timetable and all data of the portal belong to their respective owners. This
-script is provided as is, without warranty of any kind.
+MIT, see [LICENSE](LICENSE).
+
+The school timetable and all data of the portal belong to their respective owners.
