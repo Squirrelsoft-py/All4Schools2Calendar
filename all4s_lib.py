@@ -47,6 +47,17 @@ def is_filtered(subject_name, filters=None):
     return False
 
 
+def example_credentials():
+    """Return the placeholder user name and password of the example template."""
+    example = a4s_files.example_path(a4s_files.CONFIG_FILENAME)
+    try:
+        with open(example, "r", encoding="utf-8") as file:
+            section = json.load(file).get("a4s") or {}
+        return section.get("username"), section.get("password")
+    except (OSError, ValueError):
+        return None, None
+
+
 def resolve_credentials(config=None, path=None, url=None, username=None, password=None, pin=None):
     """Resolve the school credentials.
 
@@ -54,10 +65,21 @@ def resolve_credentials(config=None, path=None, url=None, username=None, passwor
     A4S_USERNAME, A4S_PASSWORD, A4S_PIN) > the "a4s" section of the
     configuration file.
     """
+    def from_environment(name):
+        """Return an environment variable, an empty value is an error."""
+        value = os.environ.get(name)
+        if value is not None and value.strip() == "":
+            raise ConfigError(
+                f"The environment variable {name} is set but empty. In a compose "
+                f"file the value has to be in quotes, a password can start with a "
+                f"# that yaml would read as a comment."
+            )
+        return value
+
     resolved = {
-        "url": url or os.environ.get("A4S_URL"),
-        "username": username or os.environ.get("A4S_USERNAME"),
-        "password": password or os.environ.get("A4S_PASSWORD"),
+        "url": url or from_environment("A4S_URL"),
+        "username": username or from_environment("A4S_USERNAME"),
+        "password": password or from_environment("A4S_PASSWORD"),
         "pin": pin or os.environ.get("A4S_PIN"),
     }
 
@@ -86,6 +108,17 @@ def resolve_credentials(config=None, path=None, url=None, username=None, passwor
         raise ConfigError(
             "The 'url' is empty. Use the host name of the school portal only, "
             "e.g. 'schule.louisenlund.de'."
+        )
+
+    # The placeholder data of the example file is no login
+    example_user, example_password = example_credentials()
+    if (example_user and example_password
+            and resolved["username"] == example_user
+            and resolved["password"] == example_password):
+        raise ConfigError(
+            "The placeholder credentials of the example file are being used, the "
+            "login would fail. Fill in your own data in "
+            f"'{a4s_files.config_path(path)}' or in the environment variables."
         )
     return resolved
 
