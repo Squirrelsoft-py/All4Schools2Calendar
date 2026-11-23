@@ -3,7 +3,7 @@ import caldav_api
 import datetime
 import pytz
 
-# a4s = all4s_lib.Main(url="schule.louisenlund.de", username="example-user", password="example-password")
+# a4s = all4s_lib.Main()
 
 berlin_tz = pytz.timezone('Europe/Berlin')
 start_time = datetime.datetime.now(berlin_tz)

@@ -5,22 +5,52 @@ from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 import os.path
 
+import a4s_files
+
+CREDENTIALS_FILENAME = "credentials.json"
+TOKEN_FILENAME = "token.json"
+
+
+class GoogleAuthError(Exception):
+    """Raised when the Google OAuth client secrets are missing or placeholders."""
+
 
 class Main:
+    def client_secrets_path(self):
+        """Return the path of the Google OAuth client secrets."""
+        path, is_example = a4s_files.resolve(CREDENTIALS_FILENAME)
+        target = a4s_files.real_path(CREDENTIALS_FILENAME)
+        if is_example or a4s_files.is_placeholder(path):
+            raise GoogleAuthError(
+                f"Google client secrets '{target}' are missing or contain only placeholder data.\n"
+                "Download your own OAuth client (Desktop app) from the Google Cloud console\n"
+                "(https://console.cloud.google.com/apis/credentials) and save it as\n"
+                f"'{target}'.\n"
+                f"Template: '{a4s_files.example_path(CREDENTIALS_FILENAME)}'"
+            )
+        return path
+
+    def token_path(self):
+        """Return the path of the file that stores the OAuth token."""
+        return a4s_files.real_path(TOKEN_FILENAME)
+
     def authenticate_google(self):
         creds = None
         # token.json speichert die Zugriffstoken – wird beim ersten Lauf erstellt
-        if os.path.exists('token.json'):
-            creds = Credentials.from_authorized_user_file('token.json', self.SCOPES)
+        token_path = self.token_path()
+        if os.path.exists(token_path) and not a4s_files.is_placeholder(token_path):
+            creds = Credentials.from_authorized_user_file(token_path, self.SCOPES)
+        elif os.path.exists(token_path):
+            a4s_files.warn_placeholder(token_path)
         # Falls keine gültigen Anmeldeinformationen vorhanden sind, zum erneuten Login auffordern.
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
             else:
-                flow = InstalledAppFlow.from_client_secrets_file('credentials.json', self.SCOPES)
+                flow = InstalledAppFlow.from_client_secrets_file(self.client_secrets_path(), self.SCOPES)
                 creds = flow.run_local_server(port=0)
             # Token speichern
-            with open('token.json', 'w') as token:
+            with open(token_path, 'w') as token:
                 token.write(creds.to_json())
         return creds
 

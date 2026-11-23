@@ -4,13 +4,27 @@ from caldav.elements import dav, cdav
 import os.path
 import getpass
 
+import a4s_files
+
+CREDENTIALS_FILENAME = "caldav_credentials.txt"
+
+
+class CalDAVError(Exception):
+    """Raised when the CalDAV server cannot be reached or does not work as expected."""
+
 
 class Main:
     def authenticate_caldav(self):
         creds = None
-        # Check if credentials file exists
-        if os.path.exists('caldav_credentials.txt'):
-            with open('caldav_credentials.txt', 'r') as file:
+        # Check if credentials file exists, fall back to the example template
+        path, is_example = a4s_files.resolve(CREDENTIALS_FILENAME)
+        if is_example:
+            a4s_files.warn_example(a4s_files.real_path(CREDENTIALS_FILENAME), path)
+        elif a4s_files.is_placeholder(path):
+            a4s_files.warn_placeholder(path)
+
+        if os.path.exists(path):
+            with open(path, 'r') as file:
                 lines = file.readlines()
                 if len(lines) >= 3:
                     url = lines[0].strip()
@@ -38,7 +52,8 @@ class Main:
             # Save credentials
             save = input("Save credentials for future use? (y/n): ")
             if save.lower() == 'y':
-                with open('caldav_credentials.txt', 'w') as file:
+                target = a4s_files.real_path(CREDENTIALS_FILENAME)
+                with open(target, 'w') as file:
                     file.write(f"{url}\n{username}\n{password}")
         
         return creds
@@ -49,14 +64,21 @@ class Main:
         self.creds = self.authenticate_caldav()
         
         # Connect to the CalDAV server
-        self.client = caldav.DAVClient(
-            url=self.creds['url'],
-            username=self.creds['username'],
-            password=self.creds['password']
-        )
-        
-        # Get principal
-        self.principal = self.client.principal()
+        try:
+            self.client = caldav.DAVClient(
+                url=self.creds['url'],
+                username=self.creds['username'],
+                password=self.creds['password']
+            )
+
+            # Get principal
+            self.principal = self.client.principal()
+        except Exception as error:
+            raise CalDAVError(
+                f"Could not connect to the CalDAV server '{self.creds['url']}': {error}\n"
+                "Check the url, username and password in 'caldav_credentials.txt' "
+                "(template: 'caldav_credentials.example.txt')."
+            ) from error
         
         # Get calendar by name or ID if provided
         if calendar_name != "":
@@ -119,14 +141,13 @@ class Main:
         end_date = datetime.datetime.fromisoformat(time_max.replace('Z', '+00:00'))
         
         # Find events in the date range
-        events = self.calendar.date_search(start=start_date, end=end_date)
+        events = self.calendar.search(start=start_date, end=end_date)
         
         if not events:
             print("No events found in the specified date window.")
         else:
             for event in events:
-                event_data = event.instance.vevent
-                event_summary = event_data.summary.value if hasattr(event_data, 'summary') else 'No title'
+                event_summary = self.get_event_summary(event)
                 event.delete()
                 print(f"Deleted event: {event_summary}")
 
@@ -147,50 +168,81 @@ class Main:
         """Delete a specific event by its ID"""
         try:
             # Try to find the event directly by ID if the calendar implementation supports it
-            event = self.calendar.event(event_id)
-            event_summary = 'Unknown'
-            
-            try:
-                # Try to get the event summary before deletion
-                event_data = event.instance.vevent
-                event_summary = event_data.summary.value if hasattr(event_data, 'summary') else 'No title'
-            except:
-                pass
-                
+            event = self.calendar.event_by_uid(event_id)
+            event_summary = self.get_event_summary(event)
+
             # Delete the event
             event.delete()
             print(f"Deleted event: {event_summary} (ID: {event_id})")
             return True
-        except:
+        except Exception:
             # If direct access fails, try to find the event by searching all events
             # Note: This is less efficient but necessary for some CalDAV servers
             print(f"Event with ID {event_id} not found directly. Searching all events...")
-            
-            events = self.calendar.date_search(
+
+            events = self.calendar.search(
                 start=self.start_time,
                 end=self.end_time
             )
-            
+
             for event in events:
                 if event.id == event_id:
-                    event_data = event.instance.vevent
-                    event_summary = event_data.summary.value if hasattr(event_data, 'summary') else 'No title'
+                    event_summary = self.get_event_summary(event)
                     event.delete()
                     print(f"Deleted event: {event_summary} (ID: {event_id})")
                     return True
-            
+
             print(f"No event found with ID: {event_id}")
             return False
-    
+
+    def get_event_component(self, event):
+        """Return the icalendar component (VEVENT) of an event.
+
+        The vobject based 'event.instance' is not used anymore, it needs the
+        vobject package which is no longer a dependency of caldav.
+        """
+        try:
+            return event.icalendar_component
+        except Exception:
+            return None
+
+    def get_event_summary(self, event):
+        """Return the title of an event"""
+        component = self.get_event_component(event)
+        if component is None:
+            return 'No title'
+        summary = component.get("summary")
+        return str(summary) if summary is not None else 'No title'
+
+    def get_event_dates(self, component, fallback_start, fallback_end):
+        """Return the start and end of an event as ISO strings"""
+        start = component.get("dtstart")
+        end = component.get("dtend")
+        start_dt = start.dt if start is not None else None
+        end_dt = end.dt if end is not None else None
+
+        if start_dt is None:
+            start_dt = fallback_start
+        if end_dt is None:
+            # Default to start time + 1 hour if no end time
+            end_dt = start_dt + datetime.timedelta(hours=1)
+
+        if isinstance(start_dt, datetime.date) and not isinstance(start_dt, datetime.datetime):
+            start_dt = datetime.datetime.combine(start_dt, datetime.time())
+        if isinstance(end_dt, datetime.date) and not isinstance(end_dt, datetime.datetime):
+            end_dt = datetime.datetime.combine(end_dt, datetime.time())
+
+        return start_dt.isoformat(), end_dt.isoformat()
+
     def get_events_in_date_range(self, time_min, time_max):
         """Get all events in a specified time range"""
         # Convert string ISO dates to datetime objects
         start_date = datetime.datetime.fromisoformat(time_min.replace('Z', '+00:00'))
         end_date = datetime.datetime.fromisoformat(time_max.replace('Z', '+00:00'))
-        
+
         # Find events in the date range
-        events = self.calendar.date_search(start=start_date, end=end_date)
-        
+        events = self.calendar.search(start=start_date, end=end_date)
+
         if not events:
             print("No events found in the specified date range.")
             return None
@@ -198,48 +250,37 @@ class Main:
             # Format the events to match the Google Calendar API structure
             formatted_events = []
             for event in events:
-                vevent = event.instance.vevent
-                
-                # Extract event ID from URL (fallback method)
-                # The URL typically ends with the ID
-                url_parts = event.url.split('/')
-                event_id = url_parts[-1]
-                if '.ics' in event_id:
-                    event_id = event_id.split('.ics')[0]
-                
-                # Get event UID which is a more reliable identifier
-                event_uid = vevent.uid.value if hasattr(vevent, 'uid') else event_id
-                
+                component = self.get_event_component(event)
+                if component is None:
+                    print(f"Skipping event without icalendar data: {event.url}")
+                    continue
+
+                # The UID is the most reliable identifier, fall back to the URL
+                event_id = event.id
+                if not event_id:
+                    url_parts = event.url.split('/')
+                    event_id = url_parts[-1]
+                    if '.ics' in event_id:
+                        event_id = event_id.split('.ics')[0]
+
                 # Extract date/time information safely
                 try:
-                    start_dt = vevent.dtstart.value
-                    if isinstance(start_dt, datetime.date) and not isinstance(start_dt, datetime.datetime):
-                        start_dt = datetime.datetime.combine(start_dt, datetime.time())
-                    start_iso = start_dt.isoformat()
-                    
-                    # Handle end time (might be missing in some events)
-                    if hasattr(vevent, 'dtend'):
-                        end_dt = vevent.dtend.value
-                        if isinstance(end_dt, datetime.date) and not isinstance(end_dt, datetime.datetime):
-                            end_dt = datetime.datetime.combine(end_dt, datetime.time())
-                        end_iso = end_dt.isoformat()
-                    else:
-                        # Default to start time + 1 hour if no end time
-                        end_dt = start_dt + datetime.timedelta(hours=1)
-                        end_iso = end_dt.isoformat()
-                        
+                    start_iso, end_iso = self.get_event_dates(component, start_date, end_date)
                 except Exception as e:
                     print(f"Error parsing event dates: {str(e)}")
                     # Use fallback dates
                     start_iso = start_date.isoformat()
                     end_iso = end_date.isoformat()
-                
+
+                summary = component.get("summary")
+                description = component.get("description")
+
                 # Extract basic event information
                 event_data = {
-                    'id': event_uid,  # Using UID as the primary identifier
+                    'id': event_id,  # Using UID as the primary identifier
                     'caldav_url': event.url,  # Store the URL for direct access
-                    'summary': vevent.summary.value if hasattr(vevent, 'summary') else 'No title',
-                    'description': vevent.description.value if hasattr(vevent, 'description') else '',
+                    'summary': str(summary) if summary is not None else 'No title',
+                    'description': str(description) if description is not None else '',
                     'start': {
                         'dateTime': start_iso,
                         'timeZone': 'Europe/Berlin'
@@ -249,11 +290,11 @@ class Main:
                         'timeZone': 'Europe/Berlin'
                     }
                 }
-                
+
                 # Debug print to verify we're getting the event properly
                 print(f"Found event: {event_data['summary']} (ID: {event_data['id']})")
-                
+
                 formatted_events.append(event_data)
-            
+
             print(f"Total events found: {len(formatted_events)}")
             return formatted_events

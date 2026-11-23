@@ -3,10 +3,12 @@ import google_calender_api
 import datetime
 import pytz
 
-a4s = all4s_lib.Main(url="schule.louisenlund.de", username="example-user", password="example-password")
+a4s = all4s_lib.Main()
 
 berlin_tz = pytz.timezone('Europe/Berlin')
-start_time = datetime.datetime.now(berlin_tz)
+# Start at midnight, otherwise the lessons of today that already started are
+# not found in the calendar and would be created again on every run.
+start_time = datetime.datetime.now(berlin_tz).replace(hour=0, minute=0, second=0, microsecond=0)
 end_time = start_time + datetime.timedelta(days=31)
 data = a4s.get_schedule(start_time=start_time.strftime("%Y-%m-%d"), end_time=end_time.strftime("%Y-%m-%d"))
 # print(data)

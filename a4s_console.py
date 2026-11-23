@@ -1,7 +1,7 @@
 import all4s_lib
 import datetime
 
-a4s = all4s_lib.Main(url="schule.louisenlund.de", username="example-user", password="example-password")
+a4s = all4s_lib.Main()
 
 today = datetime.datetime.now()
 tomorrow = today + datetime.timedelta(days=1)

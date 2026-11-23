@@ -3,10 +3,12 @@ import caldav_api
 import datetime
 import pytz
 
-a4s = all4s_lib.Main(url="schule.louisenlund.de", username="example-user", password="example-password")
+a4s = all4s_lib.Main()
 
 berlin_tz = pytz.timezone('Europe/Berlin')
-start_time = datetime.datetime.now(berlin_tz)
+# Start at midnight, otherwise the lessons of today that already started are
+# not found in the calendar and would be created again on every run.
+start_time = datetime.datetime.now(berlin_tz).replace(hour=0, minute=0, second=0, microsecond=0)
 end_time = start_time + datetime.timedelta(days=31)
 data = a4s.get_schedule(start_time=start_time.strftime("%Y-%m-%d"), end_time=end_time.strftime("%Y-%m-%d"))
 # print(data)
@@ -36,6 +38,10 @@ if events_in_date_range:
             if not event_still_in_in_schedule:
                 # delete event with id_caldav
                 print(f"delete: {id_caldav} {i['summary']}")
+                calendar.delete_event_by_id(id_caldav)
+            elif a4s_id in lesson_ids:
+                # a second event for the same lesson, keep only the first one
+                print(f"delete duplicate: {id_caldav} {i['summary']}")
                 calendar.delete_event_by_id(id_caldav)
             else: 
                 lesson_ids[a4s_id] = i["id"]

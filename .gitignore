@@ -1,0 +1,14 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+.venv/
+venv/
+
+# Local secrets - do NOT commit real credentials
+# The matching *.example.* templates are tracked on purpose.
+a4s_config.json
+caldav_credentials.txt
+credentials.json
+token.json
