@@ -10,7 +10,7 @@ lessons are added.
 ## Features
 
 - Reads the timetable from the All4Schools API (JWT login, no browser needed)
-- Writes the lessons into any CalDAV calendar (Nextcloud, a CalDAV provider, Radicale, …)
+- Writes the lessons into any CalDAV calendar (Nextcloud, Radicale, …)
 - Keeps the calendar in sync: new lessons are created, cancelled lessons are deleted
 - Filters out the "Studio Times" lessons (can be enabled again)
 - Merges consecutive lessons of the same subject into a single event
@@ -101,7 +101,7 @@ example-password
 Line 1 is the URL of the calendar collection, line 2 the user name and line 3 the password
 (or app password). The URL differs per provider, for example
 `https://cloud.example.com/remote.php/dav/` for Nextcloud or
-`https://caldav.example.com/calendars/<user>/<id>` for a CalDAV provider.
+`https://caldav.example.com/calendars/<user>/<id>` for other providers.
 
 The file path can be changed with the `CALDAV_CREDENTIALS` environment variable. If neither
 the real file nor the template is present, the server information is asked for
