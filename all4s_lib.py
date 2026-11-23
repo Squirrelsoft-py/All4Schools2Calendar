@@ -5,7 +5,7 @@ import re
 import requests
 
 import a4s_files
-from a4s_files import ConfigError, get_setting, load_config
+from a4s_files import ConfigError, get_filters, get_setting, load_config
 
 CONFIG_FILENAME = a4s_files.CONFIG_FILENAME
 
@@ -29,16 +29,22 @@ def normalize_host(url):
     return host.strip()
 
 
-def is_studio_time(subject_name):
-    """Return True if a lesson is a 'Studio Times' lesson.
+def is_filtered(subject_name, filters=None):
+    """Return True if a lesson is removed by one of the filters.
 
-    The portal uses slightly different spellings ('StudioTimes',
-    'Studio Times', 'Studio Times digitalfrei'), so the name is compared
-    without spaces and case.
+    The subject name and the filter are compared in lower case and without
+    spaces, so the filter "StudioTimes" also matches "Studio Times digitalfrei".
     """
     if not subject_name:
         return False
-    return "studiotimes" in re.sub(r"[^a-z]", "", subject_name.lower())
+    if filters is None:
+        filters = get_filters()
+    normalized = re.sub(r"[^a-z]", "", subject_name.lower())
+    for pattern in filters:
+        needle = re.sub(r"[^a-z]", "", str(pattern).lower())
+        if needle and needle in normalized:
+            return True
+    return False
 
 
 def resolve_credentials(config=None, path=None, url=None, username=None, password=None, pin=None):
@@ -176,14 +182,15 @@ class Main:
         return schoolID_response[0]["id"]
 
     
-    def __init__(self, url=None, username=None, password=None, return_StudioTimes=False, config=None, pin=None):
+    def __init__(self, url=None, username=None, password=None, filters=None, config=None, pin=None):
         credentials = resolve_credentials(config=config, url=url, username=username, password=password, pin=pin)
         self.url = credentials["url"]
         self.username = credentials["username"]
         self.password = credentials["password"]
         self.pin = credentials["pin"]
         self.token = None
-        self.return_studiotimes = return_StudioTimes
+        # The filters are the subjects that are removed from the timetable
+        self.filters = list(filters) if filters is not None else get_filters()
         self.name = None
         self.session = self.login()
         self.studentID = self.get_StudentID()
@@ -252,8 +259,8 @@ class Main:
         if formatted:
             formatted_lessons = []
             for i in schedule_lessons:
-                # Only add lessons if it is not a "Studio Times" lesson or if return_studiotimes is True
-                if not is_studio_time(i["SubjectName"]) or self.return_studiotimes:
+                # Skip the lessons that match one of the filters, for example "StudioTimes"
+                if not is_filtered(i["SubjectName"], self.filters):
                     # Calculate the number of students present
                     try:
                         students_present = int(i["StudentsCount"]) - int(i["AbsenceCount"]) - int(i["DispensationCount"])

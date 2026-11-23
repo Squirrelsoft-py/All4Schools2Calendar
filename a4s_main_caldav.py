@@ -6,12 +6,11 @@ import pytz
 # Settings, see README.md. The environment variables have the highest priority,
 # then the configuration file, then the default.
 CALENDAR_NAME = all4s_lib.get_setting("CALDAV_CALENDAR_NAME", "Stundenplan")
-INCLUDE_STUDIO_TIMES = all4s_lib.get_setting("A4S_INCLUDE_STUDIO_TIMES", False, cast=bool)
 DAYS = all4s_lib.get_setting("A4S_SYNC_DAYS", 31, cast=int)
 
 
 def main():
-    a4s = all4s_lib.Main(return_StudioTimes=INCLUDE_STUDIO_TIMES)
+    a4s = all4s_lib.Main()
 
     berlin_tz = pytz.timezone('Europe/Berlin')
     # Start at midnight, otherwise the lessons of today that already started are

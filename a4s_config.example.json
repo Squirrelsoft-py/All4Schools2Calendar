@@ -3,13 +3,15 @@
         "url": "schule.louisenlund.de",
         "username": "example-user",
         "password": "example-password",
-        "pin": null,
-        "include_studio_times": false
+        "pin": null
     },
     "caldav": {
-        "url": null,
-        "username": null,
-        "password": null,
+        "url": "https://caldav.example.com/calendars/EXAMPLE0000/00000000-0000-0000-0000-000000000000",
+        "username": "example-user",
+        "password": "example-password",
         "calendar_name": "Stundenplan"
-    }
+    },
+    "filters": [
+        "StudioTimes"
+    ]
 }

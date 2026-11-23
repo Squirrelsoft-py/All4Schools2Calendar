@@ -12,7 +12,7 @@ lessons are added.
 - Reads the timetable from the All4Schools API (JWT login, no browser needed)
 - Writes the lessons into any CalDAV calendar (Nextcloud, Radicale, …)
 - Keeps the calendar in sync: new lessons are created, cancelled lessons are deleted
-- Filters out the "Studio Times" lessons (can be enabled again)
+- Filters out the "Studio Times" lessons (the filter list can be changed)
 - Merges consecutive lessons of the same subject into a single event
 - All credentials live in local files or environment variables that are never committed
 - Ready to run in a Docker container, the image is built by GitHub Actions
@@ -76,15 +76,17 @@ All settings of the project are in one JSON file:
         "url": "schule.louisenlund.de",
         "username": "example-user",
         "password": "example-password",
-        "pin": null,
-        "include_studio_times": false
+        "pin": null
     },
     "caldav": {
         "url": "https://caldav.example.com/calendars/EXAMPLE0000/00000000-0000-0000-0000-000000000000",
         "username": "example-user",
         "password": "example-password",
         "calendar_name": "Stundenplan"
-    }
+    },
+    "filters": [
+        "StudioTimes"
+    ]
 }
 ```
 
@@ -94,12 +96,22 @@ All settings of the project are in one JSON file:
   `https://schule.louisenlund.de/` are accepted as well – the scheme and the trailing slash
   are stripped automatically.
 - `pin` is optional and only needed for accounts with two factor authentication.
-- `include_studio_times` keeps the "Studio Times" lessons in the calendar when it is `true`.
 
 **`caldav` section** – the calendar:
 
 - `url` is the URL of the calendar collection, `username` and `password` the credentials.
 - `calendar_name` is the name of the CalDAV calendar that is written.
+
+**`filters`** – the subjects that are removed from the calendar. The list is prefilled with
+`StudioTimes`, so those lessons are never written to the calendar and existing events of
+that kind are deleted by the sync. The list can be changed as needed:
+
+```json
+"filters": ["StudioTimes", "Pause", "Freizeit"]
+```
+
+An empty list keeps every lesson. The comparison ignores case and spaces, so the filter
+`StudioTimes` also matches `Studio Times digitalfrei` and `StudioTimes Spezial`.
 
 The credentials are resolved in this order:
 
@@ -143,7 +155,7 @@ case, the key in the configuration file is the name without the prefix:
 | CalDAV user | `CALDAV_USERNAME` | `caldav.username` | – | |
 | CalDAV password | `CALDAV_PASSWORD` | `caldav.password` | – | |
 | Calendar name | `CALDAV_CALENDAR_NAME` | `caldav.calendar_name` | `Stundenplan` | The calendar that is written |
-| Studio Times filter | `A4S_INCLUDE_STUDIO_TIMES` | `a4s.include_studio_times` | `false` | `true` keeps the "Studio Times" lessons |
+| Filters | `A4S_FILTERS` | `filters` | `StudioTimes` | Subjects that are removed, comma separated in the environment |
 | Sync period | `A4S_SYNC_DAYS` | – | `31` | Number of days that are synced |
 | Scheduler interval | `SYNC_INTERVAL_HOURS` | – | `24` | Hours between two syncs of the scheduler |
 
@@ -173,7 +185,7 @@ Run the sync regularly, for example every evening with a cron job:
 
 1. The lessons of the next 31 days are read from the school portal.
 2. The lessons of the same subject that follow each other directly are merged into one
-   event, "Studio Times" lessons are removed unless `A4S_INCLUDE_STUDIO_TIMES` is `true`.
+   event, the lessons that match a filter (`StudioTimes` by default) are removed.
 3. Every event of the calendar in that period is compared with the timetable:
    - events that are no longer part of the timetable are deleted
    - duplicates of the same lesson are deleted

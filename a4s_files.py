@@ -19,6 +19,8 @@ ENV_VARS = {
 
 CONFIG_FILENAME = "a4s_config.json"
 
+DEFAULT_FILTERS = ["StudioTimes"]
+
 _CONFIG_CACHE = {}
 
 
@@ -154,10 +156,10 @@ def get_setting(name, default=None, cast=None):
     """Return a setting from the environment or from the configuration file.
 
     The environment variable has the same name in upper case, for example
-    ``A4S_INCLUDE_STUDIO_TIMES``. In the configuration file the setting is
-    looked up in the section of its prefix, so ``A4S_INCLUDE_STUDIO_TIMES`` is
-    the key "include_studio_times" in the "a4s" section and
-    ``CALDAV_CALENDAR_NAME`` is the key "calendar_name" in the "caldav" section.
+    ``A4S_SYNC_DAYS``. In the configuration file the setting is looked up in
+    the section of its prefix, so ``A4S_SYNC_DAYS`` is the key "sync_days" in
+    the "a4s" section and ``CALDAV_CALENDAR_NAME`` is the key "calendar_name"
+    in the "caldav" section.
     """
     value = os.environ.get(name.upper())
 
@@ -182,3 +184,26 @@ def get_setting(name, default=None, cast=None):
     if cast:
         return cast(value)
     return value
+
+
+def get_filters(default=None):
+    """Return the list of filters.
+
+    A filter is a subject name that is removed from the calendar, for example
+    "StudioTimes". The list is read from the environment variable A4S_FILTERS
+    (comma separated) or from the "filters" key of the configuration file. An
+    empty list keeps every lesson.
+    """
+    value = os.environ.get("A4S_FILTERS")
+    if value is not None:
+        return [part.strip() for part in value.split(",") if part.strip()]
+
+    config = load_config(fallback=False, quiet=True)
+    filters = config.get("filters")
+    if filters is None:
+        filters = (config.get("a4s") or {}).get("filters")
+    if filters is None:
+        filters = default if default is not None else DEFAULT_FILTERS
+    if isinstance(filters, str):
+        filters = [filters]
+    return [str(entry) for entry in filters]
