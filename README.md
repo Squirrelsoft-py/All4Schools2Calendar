@@ -113,7 +113,6 @@ interactively and can be saved to `caldav_credentials.txt`.
 | --- | --- |
 | `a4s_console.py` | Prints the lessons of the current day |
 | `a4s_main_caldav.py` | Syncs the next 31 days into the CalDAV calendar "Stundenplan" |
-| `a4s_console_one.py` | Console script with its own copy of the library |
 
 ```bash
 .venv/bin/python a4s_console.py
@@ -158,7 +157,6 @@ credentials are sent to its REST API:
 | `a4s_files.py` | Locates the credential files and their example templates |
 | `a4s_console.py` | Prints the timetable of today |
 | `a4s_main_caldav.py` | Syncs the timetable into a CalDAV calendar |
-| `a4s_console_one.py` | Console script with its own copy of the library |
 | `test.py` | Small helper to test the calendar connection |
 
 ## Errors
