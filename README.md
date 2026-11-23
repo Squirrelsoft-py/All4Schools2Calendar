@@ -231,6 +231,13 @@ container registry:
 docker pull ghcr.io/squirrelsoft-py/all4schools2calendar:latest
 ```
 
+The package is private by default. To pull it without a token, make it public in the
+package settings, or log in first:
+
+```bash
+docker login ghcr.io -u Squirrelsoft-py -p <token with read:packages>
+```
+
 The workflow is in `.github/workflows/docker.yml`:
 
 | Trigger | What happens |

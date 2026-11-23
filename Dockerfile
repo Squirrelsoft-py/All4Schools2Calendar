@@ -3,6 +3,9 @@
 #
 # The settings are read from the environment, see .env.example and README.md.
 
+# syntax=docker/dockerfile:1
+# check=skip=SecretsUsedInArgOrEnv
+
 FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \
