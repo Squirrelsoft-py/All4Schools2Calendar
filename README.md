@@ -157,7 +157,6 @@ credentials are sent to its REST API:
 | `a4s_files.py` | Locates the credential files and their example templates |
 | `a4s_console.py` | Prints the timetable of today |
 | `a4s_main_caldav.py` | Syncs the timetable into a CalDAV calendar |
-| `test.py` | Small helper to test the calendar connection |
 
 ## Errors
 
