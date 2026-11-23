@@ -11,6 +11,8 @@ services:
       TZ: Europe/Berlin
     command: ["a4s_main_caldav.py"]
     restart: "no"
+    # volumes:
+    #   - ./config:/config:ro
 
   # Runs the sync in a loop, every SYNC_INTERVAL_HOURS hours
   scheduler:
@@ -23,3 +25,5 @@ services:
       TZ: Europe/Berlin
     command: ["scheduler.py"]
     restart: unless-stopped
+    # volumes:
+    #   - ./config:/config:ro

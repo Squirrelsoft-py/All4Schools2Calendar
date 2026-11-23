@@ -231,8 +231,20 @@ container registry:
 docker pull ghcr.io/squirrelsoft-py/all4schools2calendar:latest
 ```
 
-The workflow is in `.github/workflows/docker.yml`. To use the image from the registry,
-change the `image:` line in `docker-compose.yml` and remove the `build:` line.
+The workflow is in `.github/workflows/docker.yml`:
+
+| Trigger | What happens |
+| --- | --- |
+| Push to `main` | The image is built and pushed, tagged with `main`, `latest` and the commit sha |
+| Push of a `v*` tag | The image is built and pushed, tagged with the version (`1.2`, `1.2.3`) |
+| Pull request | The image is built to check that it still works, nothing is pushed |
+| Manual run | The same as a push to `main` |
+
+The image is built for `linux/amd64` and `linux/arm64` (Raspberry Pi), the build cache is
+kept between the runs. After the push the image is started once as a smoke test.
+
+To use the image from the registry, change the `image:` line in `docker-compose.yml` and
+remove the `build:` line.
 
 ## Project layout
 
