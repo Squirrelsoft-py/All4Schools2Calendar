@@ -1,29 +1,27 @@
 services:
-  # Runs the sync once and exits, useful for a cron job on the host:
-  #   docker compose run --rm sync
-  sync:
-    build: .
-    image: all4schools2calendar:latest
-    container_name: all4schools2calendar-sync
-    env_file:
-      - .env
-    environment:
-      TZ: Europe/Berlin
-    command: ["a4s_main_caldav.py"]
-    restart: "no"
-    # volumes:
-    #   - ./config:/config:ro
-
-  # Runs the sync in a loop, every a4s.refresh minutes
+  # Keeps the calendar up to date, every a4s.refresh minutes
   scheduler:
-    build: .
     image: all4schools2calendar:latest
-    container_name: all4schools2calendar
+    build: .
+    restart: unless-stopped
     env_file:
       - .env
     environment:
       TZ: Europe/Berlin
     command: ["scheduler.py"]
-    restart: unless-stopped
-    # volumes:
-    #   - ./config:/config:ro
+
+  # Syncs once and exits. Start it with:
+  #   docker compose --profile tools run --rm sync
+  sync:
+    image: all4schools2calendar:latest
+    build: .
+    restart: "no"
+    env_file:
+      - .env
+    environment:
+      TZ: Europe/Berlin
+    command: ["a4s_main_caldav.py"]
+    profiles:
+      - tools
+
+networks: {}

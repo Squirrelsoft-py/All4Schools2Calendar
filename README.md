@@ -213,9 +213,16 @@ passed as environment variables, the credentials are never copied into the image
 cp .env.example .env
 # fill in your own data in .env
 docker compose build
-docker compose run --rm sync        # sync once
-docker compose up -d scheduler      # sync every a4s.refresh minutes
+docker compose up -d scheduler                       # sync every a4s.refresh minutes
+docker compose --profile tools run --rm sync          # sync once and exit
 ```
+
+The compose file has two services:
+
+| Service | Description |
+| --- | --- |
+| `scheduler` | The default service, it keeps the calendar up to date and is restarted if it stops |
+| `sync` | Runs the sync once and exits, it has the profile `tools` and is only started when it is named explicitly |
 
 Without Docker Compose:
 
