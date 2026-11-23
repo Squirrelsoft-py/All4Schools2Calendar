@@ -100,7 +100,8 @@ example-password
 
 Line 1 is the URL of the calendar collection, line 2 the user name and line 3 the password
 (or app password). The URL differs per provider, for example
-`https://cloud.example.com/remote.php/dav/` for Nextcloud.
+`https://cloud.example.com/remote.php/dav/` for Nextcloud or
+`https://caldav.example.com/calendars/<user>/<id>` for a CalDAV provider.
 
 The file path can be changed with the `CALDAV_CREDENTIALS` environment variable. If neither
 the real file nor the template is present, the server information is asked for
