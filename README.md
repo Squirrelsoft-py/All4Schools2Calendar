@@ -47,27 +47,28 @@ source .venv/bin/activate
 
 ## Configuration
 
-The scripts expect two local credential files. Every one of them has a tracked example
-template (`*.example.*`) with placeholder data, so the repository is complete right after
-cloning:
+The scripts read their settings from `a4s_config.json`. Every one of the credential files
+has a tracked example template (`*.example.*`) with placeholder data, so the repository is
+complete right after cloning:
 
 | Credential file | Example template | Used by | Format |
 | --- | --- | --- | --- |
-| `a4s_config.json` | `a4s_config.example.json` | `all4s_lib.py` | JSON with the school credentials |
-| `caldav_credentials.txt` | `caldav_credentials.example.txt` | `caldav_api.py` | 3 lines: `url`, `username`, `password` |
+| `a4s_config.json` | `a4s_config.example.json` | all scripts | JSON with all settings |
+| `caldav_credentials.txt` | `caldav_credentials.example.txt` | `caldav_api.py` | Optional alternative for the CalDAV login, 3 lines: `url`, `username`, `password` |
 
 The real files are listed in `.gitignore`, only the example templates are tracked. Copy the
-templates and fill in your own data:
+template and fill in your own data:
 
 ```bash
-cp a4s_config.example.json         a4s_config.json
-cp caldav_credentials.example.txt   caldav_credentials.txt
+cp a4s_config.example.json a4s_config.json
 ```
 
-If a real file is missing, the matching example template is used instead and the program
+If the real file is missing, the matching example template is used instead and the program
 prints a warning including the `cp` command that creates the real file.
 
-### `a4s_config.json` – the school login
+### `a4s_config.json` – the settings
+
+All settings of the project are in one JSON file:
 
 ```json
 {
@@ -79,16 +80,25 @@ prints a warning including the `cp` command that creates the real file.
         "include_studio_times": false
     },
     "caldav": {
+        "url": "https://caldav.example.com/calendars/EXAMPLE0000/00000000-0000-0000-0000-000000000000",
+        "username": "example-user",
+        "password": "example-password",
         "calendar_name": "Stundenplan"
     }
 }
 ```
+
+**`a4s` section** – the school portal:
 
 - `url` is the host name of the school portal. `https://schule.louisenlund.de` and
   `https://schule.louisenlund.de/` are accepted as well – the scheme and the trailing slash
   are stripped automatically.
 - `pin` is optional and only needed for accounts with two factor authentication.
 - `include_studio_times` keeps the "Studio Times" lessons in the calendar when it is `true`.
+
+**`caldav` section** – the calendar:
+
+- `url` is the URL of the calendar collection, `username` and `password` the credentials.
 - `calendar_name` is the name of the CalDAV calendar that is written.
 
 The credentials are resolved in this order:
@@ -97,7 +107,10 @@ The credentials are resolved in this order:
 2. environment variables: `A4S_URL`, `A4S_USERNAME`, `A4S_PASSWORD`, `A4S_PIN`
 3. the `a4s` section of `a4s_config.json` (the path can be changed with `A4S_CONFIG`)
 
-### `caldav_credentials.txt` – the CalDAV login
+### `caldav_credentials.txt` – the CalDAV login (optional)
+
+An alternative to the `caldav` section of the configuration file, three lines with the URL,
+the user name and the password:
 
 ```
 https://caldav.example.com/calendars/EXAMPLE0000/00000000-0000-0000-0000-000000000000
@@ -110,9 +123,9 @@ Line 1 is the URL of the calendar collection, line 2 the user name and line 3 th
 `https://cloud.example.com/remote.php/dav/` for Nextcloud or
 `https://caldav.example.com/calendars/<user>/<id>` for other providers.
 
-The file path can be changed with the `CALDAV_CREDENTIALS` environment variable. If neither
-the real file nor the template is present, the server information is asked for
-interactively and can be saved to `caldav_credentials.txt`.
+The `caldav` section of `a4s_config.json` and the environment variables have priority over
+this file. If neither is set, the server information is asked for interactively and can be
+saved to `caldav_credentials.txt`.
 
 ### Settings
 
@@ -126,16 +139,13 @@ case, the key in the configuration file is the name without the prefix:
 | School user | `A4S_USERNAME` | `a4s.username` | – | |
 | School password | `A4S_PASSWORD` | `a4s.password` | – | |
 | School PIN | `A4S_PIN` | `a4s.pin` | – | Only for two factor authentication |
-| CalDAV URL | `CALDAV_URL` | – | – | URL of the calendar collection |
-| CalDAV user | `CALDAV_USERNAME` | – | – | |
-| CalDAV password | `CALDAV_PASSWORD` | – | – | |
+| CalDAV URL | `CALDAV_URL` | `caldav.url` | – | URL of the calendar collection |
+| CalDAV user | `CALDAV_USERNAME` | `caldav.username` | – | |
+| CalDAV password | `CALDAV_PASSWORD` | `caldav.password` | – | |
 | Calendar name | `CALDAV_CALENDAR_NAME` | `caldav.calendar_name` | `Stundenplan` | The calendar that is written |
 | Studio Times filter | `A4S_INCLUDE_STUDIO_TIMES` | `a4s.include_studio_times` | `false` | `true` keeps the "Studio Times" lessons |
 | Sync period | `A4S_SYNC_DAYS` | – | `31` | Number of days that are synced |
 | Scheduler interval | `SYNC_INTERVAL_HOURS` | – | `24` | Hours between two syncs of the scheduler |
-
-The CalDAV URL, user and password can also be given in `caldav_credentials.txt`, the
-environment variables win over that file.
 
 ## Usage
 
@@ -242,7 +252,6 @@ change the `image:` line in `docker-compose.yml` and remove the `build:` line.
 - The `.dockerignore` keeps the credentials out of the build context.
 - If you ever committed real credentials, remove them from the history (for example with
   `git filter-repo --replace-text`) and change the affected passwords.
-
 ## License
 
 The school timetable and all data of the portal belong to their respective owners. This

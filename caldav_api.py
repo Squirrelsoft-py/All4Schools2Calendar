@@ -15,12 +15,34 @@ class CalDAVError(Exception):
 
 class Main:
     def authenticate_caldav(self):
-        creds = None
-
         # 1. the environment has the highest priority
         url = os.environ.get("CALDAV_URL")
         username = os.environ.get("CALDAV_USERNAME")
         password = os.environ.get("CALDAV_PASSWORD")
+
+        # 2. the configuration file
+        config = a4s_files.load_config(fallback=False, quiet=True)
+        section = config.get("caldav") or {}
+        url = url or section.get("url")
+        username = username or section.get("username")
+        password = password or section.get("password")
+
+        # 3. the credentials file, the example template is only a template
+        if not (url and username and password):
+            path, is_example = a4s_files.resolve(CREDENTIALS_FILENAME)
+            if is_example:
+                a4s_files.warn_example(a4s_files.real_path(CREDENTIALS_FILENAME), path)
+            elif a4s_files.is_placeholder(path):
+                a4s_files.warn_placeholder(path)
+
+            if os.path.exists(path) and not is_example:
+                with open(path, 'r') as file:
+                    lines = file.readlines()
+                    if len(lines) >= 3:
+                        url = url or lines[0].strip()
+                        username = username or lines[1].strip()
+                        password = password or lines[2].strip()
+
         if url and username and password:
             return {
                 'url': url,
@@ -28,45 +50,31 @@ class Main:
                 'password': password
             }
 
-        # 2. the credentials file
-        path, is_example = a4s_files.resolve(CREDENTIALS_FILENAME)
-        if is_example:
-            a4s_files.warn_example(a4s_files.real_path(CREDENTIALS_FILENAME), path)
-        elif a4s_files.is_placeholder(path):
-            a4s_files.warn_placeholder(path)
-
-        if os.path.exists(path):
-            with open(path, 'r') as file:
-                lines = file.readlines()
-                if len(lines) >= 3:
-                    url = lines[0].strip()
-                    username = lines[1].strip()
-                    password = lines[2].strip()
-                    creds = {
-                        'url': url,
-                        'username': username,
-                        'password': password
-                    }
-        
         # If no valid credentials, prompt for login
-        if not creds:
-            print("Please enter your CalDAV server information:")
+        print("Please enter your CalDAV server information:")
+        try:
             url = input("CalDAV server URL (e.g. https://example.com/caldav/): ")
             username = input("Username: ")
             password = getpass.getpass("Password: ")
-            
-            creds = {
-                'url': url,
-                'username': username,
-                'password': password
-            }
-            
-            # Save credentials
-            save = input("Save credentials for future use? (y/n): ")
-            if save.lower() == 'y':
-                target = a4s_files.real_path(CREDENTIALS_FILENAME)
-                with open(target, 'w') as file:
-                    file.write(f"{url}\n{username}\n{password}")
+        except EOFError as error:
+            raise CalDAVError(
+                "No CalDAV credentials found. Set CALDAV_URL, CALDAV_USERNAME and "
+                "CALDAV_PASSWORD, or add them to the 'caldav' section of "
+                f"'{a4s_files.real_path(a4s_files.CONFIG_FILENAME)}'."
+            ) from error
+
+        creds = {
+            'url': url,
+            'username': username,
+            'password': password
+        }
+        
+        # Save credentials
+        save = input("Save credentials for future use? (y/n): ")
+        if save.lower() == 'y':
+            target = a4s_files.real_path(CREDENTIALS_FILENAME)
+            with open(target, 'w') as file:
+                file.write(f"{url}\n{username}\n{password}")
         
         return creds
 

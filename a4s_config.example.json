@@ -7,6 +7,9 @@
         "include_studio_times": false
     },
     "caldav": {
+        "url": null,
+        "username": null,
+        "password": null,
         "calendar_name": "Stundenplan"
     }
 }

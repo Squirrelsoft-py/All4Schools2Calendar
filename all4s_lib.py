@@ -5,13 +5,9 @@ import re
 import requests
 
 import a4s_files
+from a4s_files import ConfigError, get_setting, load_config
 
-CONFIG_FILENAME = "a4s_config.json"
-_CONFIG_CACHE = {}
-
-
-class ConfigError(Exception):
-    """Raised when the configuration file is missing or incomplete."""
+CONFIG_FILENAME = a4s_files.CONFIG_FILENAME
 
 
 class LoginError(Exception):
@@ -43,91 +39,6 @@ def is_studio_time(subject_name):
     if not subject_name:
         return False
     return "studiotimes" in re.sub(r"[^a-z]", "", subject_name.lower())
-
-
-def config_path(path=None):
-    """Return the path of the configuration file."""
-    if path:
-        return path
-    return a4s_files.real_path(CONFIG_FILENAME)
-
-
-def load_config(path=None, fallback=True, quiet=False):
-    """Load the JSON configuration file that holds the school credentials.
-
-    The file is looked up in this order:
-      1. the ``path`` argument
-      2. the ``A4S_CONFIG`` environment variable
-      3. ``a4s_config.json`` in the current working directory
-
-    If the file does not exist the tracked example template is used instead.
-    Set ``fallback`` to False to get an empty configuration instead of the
-    template and ``quiet`` to suppress the warnings.
-    """
-    path = config_path(path)
-    if path in _CONFIG_CACHE:
-        return _CONFIG_CACHE[path]
-
-    if not os.path.exists(path):
-        example = a4s_files.example_path(path)
-        if not fallback or not os.path.exists(example):
-            if not fallback:
-                _CONFIG_CACHE[path] = {}
-                return _CONFIG_CACHE[path]
-            raise ConfigError(
-                f"Configuration file '{path}' not found. "
-                f"Copy '{example}' to '{path}' and fill in your credentials."
-            )
-        if not quiet:
-            a4s_files.warn_example(path, example)
-        path = example
-    elif a4s_files.is_placeholder(path) and not quiet:
-        a4s_files.warn_placeholder(path)
-
-    try:
-        with open(path, "r", encoding="utf-8") as file:
-            config = json.load(file)
-    except json.JSONDecodeError as error:
-        raise ConfigError(f"Configuration file '{path}' is not valid JSON: {error}") from error
-
-    if not isinstance(config, dict):
-        raise ConfigError(f"Configuration file '{path}' must contain a JSON object.")
-    _CONFIG_CACHE[path] = config
-    return config
-
-
-def get_setting(name, default=None, cast=None):
-    """Return a setting from the environment or from the configuration file.
-
-    The environment variable has the same name in upper case, for example
-    ``A4S_INCLUDE_STUDIO_TIMES``. In the configuration file the setting is
-    looked up in the section of its prefix, so ``A4S_INCLUDE_STUDIO_TIMES`` is
-    the key "include_studio_times" in the "a4s" section and
-    ``CALDAV_CALENDAR_NAME`` is the key "calendar_name" in the "caldav" section.
-    """
-    value = os.environ.get(name.upper())
-
-    if value is None:
-        config = load_config(fallback=False, quiet=True)
-        prefix, _, key = name.upper().partition("_")
-        section = config.get(prefix.lower()) or {}
-        if key.lower() in section:
-            value = section[key.lower()]
-        else:
-            for section_name in ("a4s", "caldav"):
-                data = config.get(section_name) or {}
-                if name.lower() in data:
-                    value = data[name.lower()]
-                    break
-
-    if value is None:
-        value = default
-
-    if cast is bool:
-        return str(value).strip().lower() in ("1", "true", "yes", "on")
-    if cast:
-        return cast(value)
-    return value
 
 
 def resolve_credentials(config=None, path=None, url=None, username=None, password=None, pin=None):
