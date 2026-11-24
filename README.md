@@ -255,6 +255,7 @@ kept between the runs. After the push the image is started once as a smoke test.
 | `a4s_console.py` | Prints the timetable of today |
 | `a4s_main_caldav.py` | Syncs the timetable into a CalDAV calendar |
 | `scheduler.py` | Runs the sync in a loop |
+| `tests/` | Local mocks of the portal and of the calendar, and the tests |
 | `Dockerfile` | Image for the sync |
 | `docker-compose.yml` | The scheduler, ready for Portainer and Dockge |
 | `.env.example` | Template for the settings of the container |
@@ -270,6 +271,19 @@ git checkout dev
 # ... change something ...
 git commit -am "..."
 git push origin dev
+```
+
+## Tests
+
+The tests never talk to the real school portal and never write to a real calendar. They
+use a local mock of the portal (`tests/mock_a4s.py`) and a local in memory calendar
+(`tests/mock_caldav.py`). A fixture blocks every request that does not go to
+`127.0.0.1`, so a test that forgets the mock fails instead of touching the real
+services.
+
+```bash
+.venv/bin/python -m pip install -r requirements-dev.txt
+.venv/bin/python -m pytest
 ```
 
 ## Errors

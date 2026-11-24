@@ -14,19 +14,24 @@ class LoginError(Exception):
     """Raised when the login against the school portal fails."""
 
 
-def normalize_host(url):
-    """Normalize a school URL to its bare host name.
+def normalize_url(url):
+    """Normalize the url of the school portal.
 
-    Accepts 'schule.example.org', 'https://schule.example.org' and
-    'https://schule.example.org/' and always returns 'schule.example.org'.
+    'schule.example.org' becomes 'https://schule.example.org',
+    'https://schule.example.org/' becomes 'https://schule.example.org' and a
+    url with a scheme keeps it, that is needed for the local test server.
     """
     if not url:
         return url
-    host = url.strip()
-    if "//" in host:
-        host = host.split("//", 1)[1]
-    host = host.split("/", 1)[0]
-    return host.strip()
+    value = url.strip()
+    scheme = ""
+    if "//" in value:
+        scheme, _, value = value.partition("//")
+        scheme = scheme.rstrip(":") + "://"
+    value = value.split("/", 1)[0]
+    if not scheme:
+        scheme = "https://"
+    return scheme + value
 
 
 def is_filtered(subject_name, filters=None):
@@ -103,8 +108,8 @@ def resolve_credentials(config=None, path=None, url=None, username=None, passwor
         )
 
     # The url may be given with or without scheme and trailing slash
-    resolved["url"] = normalize_host(resolved["url"])
-    if not resolved["url"]:
+    resolved["url"] = normalize_url(resolved["url"])
+    if not resolved["url"].strip("https:/"):
         raise ConfigError(
             "The 'url' is empty. Use the host name of the school portal only, "
             "e.g. 'schule.louisenlund.de'."
@@ -126,7 +131,7 @@ def resolve_credentials(config=None, path=None, url=None, username=None, passwor
 class Main:
     @property
     def base_url(self):
-        return f"https://{self.url}"
+        return self.url
 
     @property
     def referer(self):
@@ -231,7 +236,7 @@ class Main:
 
 
     
-    def get_schedule(self, formatted=True, start_time="2025-02-3", end_time="2025-02-4"):
+    def get_schedule(self, formatted=True, start_time="2025-02-03", end_time="2025-02-04"):
         """{
         'Id': '1010140', 
         'start': '2025-02-03T16:00:00+01:00', 
