@@ -65,7 +65,12 @@ def sample_lessons(date=None):
 
 
 class MockA4SServer:
-    """A local server that behaves like the REST API of the school portal"""
+    """A local server that behaves like the REST API of the school portal
+
+    It behaves like the real portal in the points that matter for the tests:
+    the credentials are checked, the api calls need the token and the
+    timetable is limited to the requested period.
+    """
 
     def __init__(self, lessons=None):
         self.lessons = lessons
@@ -78,8 +83,15 @@ class MockA4SServer:
         return 200, TOKEN
 
     def handle_schedule(self, body):
-        date = body.get("from")
-        lessons = self.lessons if self.lessons is not None else sample_lessons(date)
+        lessons = self.lessons if self.lessons is not None else sample_lessons()
+
+        # the portal only returns the lessons of the requested period
+        start = body.get("from")
+        end = body.get("to")
+        if start and end:
+            lessons = [lesson for lesson in lessons
+                       if start <= lesson["start"][:10] <= end]
+
         return 200, {"lessons": lessons}
 
     # --- the server ------------------------------------------------------
@@ -107,11 +119,18 @@ class MockA4SServer:
                 self.end_headers()
                 self.wfile.write(body)
 
+            def _authorized(self):
+                """The api calls need the token of the login"""
+                return self.headers.get("Authorization") == f"Bearer {TOKEN}"
+
             def do_POST(self):
                 body = self._read()
                 server.requests.append(("POST", self.path, body))
+
                 if self.path.endswith("/api/Api/Authorization/JwtAuth"):
                     status, payload = server.handle_login(body)
+                elif not self._authorized():
+                    status, payload = 401, {"Message": "no valid token"}
                 elif self.path.endswith("/api/api/Schedule/GetSchedule"):
                     status, payload = server.handle_schedule(body)
                 else:
@@ -120,7 +139,10 @@ class MockA4SServer:
 
             def do_GET(self):
                 server.requests.append(("GET", self.path, None))
-                if self.path.endswith("/api/Api/AppUser/GetUserInfo"):
+
+                if not self._authorized():
+                    self._reply(401, {"Message": "no valid token"})
+                elif self.path.endswith("/api/Api/AppUser/GetUserInfo"):
                     self._reply(200, {"userName": "Test User", "crmEntityId": STUDENT_ID})
                 elif self.path.endswith("/api/Api/AppUser/GetSchoolsForCurrentUser"):
                     self._reply(200, [{"id": SCHOOL_ID, "name": "Test Schule"}])

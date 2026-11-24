@@ -43,6 +43,11 @@ def lesson_event(uid, lesson_id, summary=None, start=None, end=None, teacher=Non
     return event(uid, summary, description, start, end)
 
 
+def in_range(event, time_min, time_max):
+    """Return True if an event lies in the given period"""
+    return event["start"]["dateTime"] <= time_max and event["end"]["dateTime"] >= time_min
+
+
 class MockCalDAV:
     """An in memory stand in for caldav_api.Main"""
 
@@ -53,7 +58,8 @@ class MockCalDAV:
     # --- the api of caldav_api.Main --------------------------------------
     def get_events_in_date_range(self, time_min, time_max):
         self.calls.append(("get_events", time_min, time_max))
-        return copy.deepcopy(self.events)
+        found = [e for e in self.events if in_range(e, time_min, time_max)]
+        return copy.deepcopy(found)
 
     def create_event(self, name, description, start, end):
         self.calls.append(("create", name, start, end))

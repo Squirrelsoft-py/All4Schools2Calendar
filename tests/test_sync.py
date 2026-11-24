@@ -105,3 +105,20 @@ def test_an_event_without_a_marker_is_kept(portal, mock_calendar):
 
     assert "Orchesterprobe" in mock_calendar.summaries()
     assert not mock_calendar.calls_of("delete")
+
+
+def test_the_calendar_only_returns_the_events_of_the_period(mock_calendar):
+    """The mock behaves like the calendar, it only returns the events of the period"""
+    from tests.mock_caldav import in_range
+
+    lesson = lesson_from_sample(0)
+    inside = lesson_event("e1", lesson, start=today_at(8), end=today_at(9))
+    outside = lesson_event("e2", lesson, start="2020-01-01T08:00:00+01:00",
+                           end="2020-01-01T09:00:00+01:00")
+    mock_calendar.events = [inside, outside]
+
+    found = mock_calendar.get_events_in_date_range(today_at(0), today_at(23, 59))
+
+    assert [e["id"] for e in found] == ["e1"]
+    assert in_range(inside, today_at(0), today_at(23, 59))
+    assert not in_range(outside, today_at(0), today_at(23, 59))
