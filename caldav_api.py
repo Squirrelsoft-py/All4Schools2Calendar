@@ -1,6 +1,7 @@
 import datetime
 import caldav
 from caldav.elements import dav, cdav
+from icalendar import vDDDTypes
 import os.path
 import getpass
 
@@ -152,6 +153,28 @@ class Main:
         )
         
         print(f'Event created: {name}')
+        return event.url
+
+    def update_event(self, event_id, name, description, start, end):
+        """Update an existing event in place.
+
+        The uid of the event stays the same, so the calendar clients keep the
+        event and everything that was added to it.
+        """
+        event = self.calendar.event_by_uid(event_id)
+        start_date = datetime.datetime.fromisoformat(start.replace('Z', '+00:00'))
+        end_date = datetime.datetime.fromisoformat(end.replace('Z', '+00:00'))
+
+        with event.edit_icalendar_component() as component:
+            component["SUMMARY"] = name
+            component["DESCRIPTION"] = description
+            # The times are written in utc, a plain datetime is not a valid
+            # date-time for the server
+            component["DTSTART"] = vDDDTypes(start_date.astimezone(datetime.timezone.utc))
+            component["DTEND"] = vDDDTypes(end_date.astimezone(datetime.timezone.utc))
+        event.save()
+
+        print(f"Event updated: {name}")
         return event.url
     
     def delete_events_in_date_range(self, time_min, time_max):

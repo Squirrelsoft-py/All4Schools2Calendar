@@ -17,6 +17,7 @@ but everything except the portal itself is generic.
 - Reads the timetable from the school portal (JWT login, no browser needed)
 - Writes the lessons into any CalDAV calendar (Nextcloud, Radicale, Infomaniak, …)
 - Keeps the calendar in sync: new lessons are created, cancelled lessons are deleted
+- Updates changed lessons in place, a new room or a new time does not create a new event
 - Filters out lessons you do not want in the calendar, for example the "Studio Times"
 - Merges consecutive lessons of the same subject into a single event
 - All settings live in one JSON file or in environment variables, the credentials are
@@ -155,10 +156,14 @@ Run the sync regularly, for example every evening with a cron job:
 1. The lessons of the next 31 days are read from the school portal.
 2. The lessons of the same subject that follow each other directly are merged into one
    event, the lessons that match a filter (`StudioTimes` by default) are removed.
-3. Every event of the calendar in that period is compared with the timetable:
-   - events that are no longer part of the timetable are deleted
-   - duplicates of the same lesson are deleted
-   - lessons without an event are created
+3. Every event of the calendar in that period is compared with the timetable. The link
+   between an event and a lesson is the id behind `###` in the description of the event:
+   - an event whose lesson is not in the timetable any more is **deleted**
+   - a second event for the same lesson is **deleted**
+   - an event whose lesson changed is **updated in place**, for example a new room, a new
+     time or a new teacher. The event keeps its id, so the calendar clients keep it and
+     everything that was added to it
+   - a lesson without an event is **created**
 
 Running the sync twice in a row does not change anything.
 
